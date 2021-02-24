@@ -1,0 +1,520 @@
+>> We need to think about application level security in which while building/implementing application we would think what data to expose to which user or not. Like wise, Spring security is a application framework that helps you to do application level security.
+
+--> Login and logout functionality
+--> Allow/block access to URLs to logged in users
+--> Allow/block access to URLs to logged in users and with certain roles(i.e. admin access)
+
+>> Spring security handles common vulnerabilities. Just by adding spring security to your application it get protected from bunch of vulnerabilities like session fixation, click jacking, click site request forgery.
+
+>> Spring security very widely adopted in the industry.
+
+>> With spring security we can do user name/password authentication, SSO/Okta/LDAP, app level authorization which goes in addition to authentication, Intra app authorization like OAuth(i.e.applications authorize with other applications), microservice security(using tokens, JWT), method level security.
+
+5 core concepts in spring security
+----------------------------------
+--> Authentication
+--> Authorization 
+--> Principal
+--> Granted Authority
+--> Roles
+
+Authentication - Representation of user id in order to authenticate the user. In any application by the help of authentication it validated which part of account is associated with the user which proves that it is that particular user. The common way it is done by providing user id and password. This type of authentication is called knowledge based authentication.This can be a password, pincode, answer to a secret/ personal question. Knowledge based authentication is easy to implement and use. It is not fully safe because somebody can steal your password and can impersonate as you. Other authentication like possession based authentication like phone/text message, key cards and badges, access token device. There are some multi factor authentication like enter your pssword and then text message will come to your phone. Asks, Who is this user
+
+Authorization - This is the security gaurd examining what you want and then deciding if you are allowed to do that.This is what answering the question can this user do what they are trying to do. Yes/No but user can able to do one particular operation and maynot able to do another operation. The allow yes/no decision depending on who the user is and what they trying to do is called authorization. Asks, Are they allowed to do this.
+Also, it is the bunch of permission to be allowed to given users and it depends upon the application admin.
+
+Principal - It is a person you have identified through the process of authentication. In other words, Principal is the currently logged in user.Once the application authenticate say by giving any user's user id and password then the application establishes the principal and it remembers it. This is the reason why you authenticate the application only once and you don't need to enter user id and password for every request or pageload.Because app remembers principal as the currently logged in user in the context of the application.  
+
+Granted Authority - In spring security, this concept of permission is called authority or called granted authority.The user is trying to do something in the application and the application would allow or authorize them to do it only if the user has been granted authority to do so. For example, taking the store clerk who is having authority to do_checkout, make_store_announcements etc.
+
+Role - It is very much like group of authorities that are usually assigned together. So, you something create like role_store_clerk, role_dept_mgr, role_store_mgr and assigned all the authorities. Similar APIs works both for authorities and roles. But, the concept differ how fine grained the permission allowed are authorities and more course grained grouping of permission are role.
+
+Adding Spring Security To a Springboot Application 
+--------------------------------------------------
+>> In POM.xml, add spring-boot-starter-security dependency which pulls all the necessary spring security dependencies.
+
+Spring security default behavior
+--------------------------------
+>> It adds mandatory authentication for URLs - Lets say we have spring boot application with bunch of URLs and you throw spring security in there. By default, without any configuration make sure that authentication is required for all those URLs. However, spring boot application comes with /error by default and spring security does not secure that.Because, you don't typically need to show error messages but in general in adds authentication for all the URL APIs. 
+
+>> Adds login form - We have seen that there is a /login route which brings up the login form. It adds that controller to your application.
+
+>> Handles login error - It handles any login error. It has that authentication logic where it examines user id and password and then it validates and makes sure that if it corrects and if it not correct then it shows a login message.
+
+>> Creates a user and sets a default password - If the developer don't provide user id and password then spring security when added to the class path it created a user id and password by default, so that's why it showing a login form in a application when spring security added to its class path. When you see the console you will see "Using generated security password :" where you will find the password and by convension spring security create user called user by default for any springboot application just by adding the spring-boot-starter-security dependency. If you want to customize this then go to application.properties i.e. spring.security.user.name=foo and spring.security.user.password=foo.Basically, we are telling spring security create user with this name and this password.
+
+Configure authentication in spring security based on bunch of users
+-------------------------------------------------------------------
+We will be configuring the authentication by actually hard coading couple of users and saving it in memory and spring security authenticate and verify against them. The way to configure authentication in spring security is by affecting whats called the AuthenticationManager. AuthenticationManager is true to its name something that manages authentication in a spring security application.It has actually has a method called authenticate() method and that either returns a successful authentication or it throws an exception when it comes to authentication says hey i cannot authenticate so authentication manager is what does the authentication now. It affect it by configuring what authentication manager does using a builder pattern and you don't need to directly work with authentication manager in most part but what you do instead is work with a builder class called authentication manager builder. We use AuthenticationManagerBuilder to configure what the authentication should actually do. First step - Get hold of AuthenticationManagerBuilder and second step - Set the configuration on the AuthenticationManagerBuilder. When we are dealing with AuthenticationManagerBuilder it asks what type of authentication we want. We reply memory authentication please. Authentication manager says ok well then tell me what the username password and the role of your in memory users are and then you give it the user information it could be one user or it could be multiple users but once you've done this once you've configured AuthenticationManagerBuilder with these properties we can imagine a new authentication manager being created somehow which has the values we want. We are not dealing with Authentication Manager but we are dealing with AuthenticationManagerBuilder. By leveraging a hook that's already available in the spring security app we get hold off this AuthenticationManagerBuilder. In spring security app there is a class sitting there which has a method called configure(AuthenticationManagerBuilder) and takes in AuthenticationManagerBuilder as argument. The reason that the class is there is so that it gives developer an oppertunity to extend the class override that configure method and do the configuration that we want. If we dont extend and override the configure () method the default configuration happens. But, its an oppertunity for us to take the AuthenticationManagerBuilder instance and do this interaction. Now, while implementing spring security application, implement a class which extends WebSecurityConfigureAdapter class which is sitting in the spring security app which has this configure method. In the implemented class annoted @EnableWebSecurity which tells spring security that this is a 	web security configuration web. Springboot application does not allow us to keep string password, so it enforce developer to do password encoding.Just expose to spring security i.e. @Bean of type PasswordEncoder and spring security is looking for all available beans any of them as password encoder and it is going to use it as password encoding.So, annotate a method @Bean, so the return of method is going to be a spring bean and method returns instance of password encoder.This is what spring security expects. 
+
+Configure authorization in spring security 
+------------------------------------------
+>> It is to check the request has the authority to perform what it needs to do. We know APIs are accessible only if you login by entering the user id and password of the users in the system no matter where the users are configured.Here, primarily we are looking ar three APIs.First API to be accessible by everybody whether they are logged in or not.Second API we want to be able to accessed by only authenticated users, so it doesn't matter if they have the role of a user or they have the role of admin but they need to be authenticated.Third API to be accessible by users who are not only authenticated but they also have the role of admin, so if somebody is logged in and they have the role of user they should not be able to access the third API. Using an object of type HTTP security and lets configure what are the paths and what are the access restrictions for those paths. Use the same technique that has been used in authentication and override configure(HttpSecurity) method.
+
+
+>> Filters - A filter is essentially a construct in a servlet application that lets you intercept requests. If you have bunch of servlets and filter is applied.Then, before the request reaches to any servlet it first goes to filter first. It helps in pre processing and post processing of the request. It can manipulate request before it goes to servlet. In fact, it can stop the request then they can even reach the servlet. Filters can be applied to wide range of URLs. For example, we can say map this filter to all URLs that start with admin/starter.In case of web application, thats what spring security does.When you drop the spring security starter dependency into your spring boot application it does the filter mapping to intercept all the request /** and maps it to spring security own filter called delegating filter proxy.If you are not working in spring boot app then you need to manually add this filter to intercepts all the request.Note, /* pattern maps to all incoming request.However, spring security has the power to either allow requests or block requests based on what you configure.Here, the whole idea is, intercepts all request with spring security at the filter level and then you tell spring security what your authentication and authorization requirements are per URL.This way, all your configuration is directly with spring security.Now, filter delegates its job to other specific spring security filters to do different things like URL being requested or configuration is going on for the spring security app.Out of all internal filters, one of the filter is authentication filter which intercepts all authentication requests and initiates the authentication process.Internally, AuthenticationProvider as something responsible for doing the actual authentication so this is an interface that has a method called authenticate() method and you need to have implementation of this authenticate() method in your application and then tell spring security about it.Then spring security will call this authenticate() method to authenticate your users.This method checks what passed in and thus says your credentials are legit authentication successful then spring security will allow the user get inide the application.
+In springboot application, the user has entered user id and password the spring security take those credentials and puts it into an authentication object and it goes to this implementation of AuthenticationProvider and calls the authenticate() method. After that, the authenticate() method takes credentials this authenticate object. 
+
+>> The authenticate() method looks at the authenticate object and examine the credentials and if the credentials are right the  the method returns an object which is of type authentication.However, this instance instead of holding credentials it holds the information about the currently logged in user.In spring security, the framework holds the user information of currently logged in user and this representation is reffered to as Principal.
+Authentication filter intercepts authentication requests.It creates authentication object with the credentials and passes it to the authentication manager the authentication manager then finds the right provider that can handle the authentication using the supports() method.Then the authentication manager calls the authenticate() method on that authentication provider and passes the authentication object.The authentication provider looks up the corresponding user in the system by using the user details service.User details service returns the user details instance which the authentication provider then verifies and then the authentication happens.If the authentication is successful then the authentication object is returned back with the Principle and the authorities.The principle often being just the instance of user details object.Then this authentication object goes all the way back to the autentication filter that started at all.If the authentication is not successful then the authentication provider throws an authentication exception and that exception bubbles all the way up to the filter and there either something catches it or the users sees the exception thrown possibly  as an error page.Apart from all this, if the authentication filter gets the authentication object with the principle then it takes that object and saves it in the thread context.There is a security context associated with the current thread. There are bunch of filters in the spring security filter chain which do various other things.There is one filter which manages the user session which takes in the authenticated principle and associates with the user session and thats the reason you have to authenticate with every request.For every subsequent request this filter is also responsible for taking the context from the session and saving it to thread local again so that its available for the framework.
+
+>> https://github.com/koushikkothagal/spring-boot-security
+
+>> https://github.com/koushikkothagal/spring-security-jpa
+
+Steps for implementation of springboot + spring security with JPA authentication and MySQL
+------------------------------------------------------------------------------------------
+The objective is spring security that works with database authentication using JPA in connecting to MySQL database.Spring security connect to MySQL instance using JPA and authenticate users against the user information stored in that database.
+
+--> Create MySql database as springsecurity and user table having fields id, active, password, roles, user_name.
+
+--> Create a new spring boot project from the scratch. For this, browse https://start.spring.io having artifact id as spring-security-jpa and add bunch of dependencies as spring-web-starter, spring-security-starter, jpa, mysql(database driver) and finally generate the project.
+
+--> Create resource class as HomeResource and annoted this class as @RestController. And, add three APIs to this class. First API is mapped to root URL i.e./ (accessible to everybody), 2nd is user API which we want people to be able to authenticate before they access it.Once this get authenticated respective whether you have user role or admin role you should be able to access this /user API. 3rd is the /admin API which we want only to be accessible only by somebody who has a admin role, someone has to authenticate first and they need to have admin role to be able to access.
+
+--> Add spring security dependency to class path.
+
+--> Configure spring security - create a class i.e.SecurityConfiguration that extends WebSecurityConfigurerAdapter.Now, create couple of methods which let us access some spring core security objects and by using those objects we can tell spring security what to do. The first method we override configure(auth) which takes in the AuthenticationManagerBuilder which we use this to configure authentication. Here, we need to tell spring security that this authentication needs to be through connecting to JPA and getting the data from database i.e. MYSQL.
+
+Now, override another configure(HttpSecurity http) which takes in HttpSecurity and paste the block of code which set up the authorization for three APIs.
+http.authorizeRequests() -- This line says authorize all requests.
+                .antMatchers("/admin").hasRole("ADMIN")
+                .antMatchers("/user").hasAnyRole("ADMIN", "USER")
+                .antMatchers("/").permitAll()
+                .and().formLogin();
+Now, we have set up authorization.
+
+--> Set up authentication - There are bunch of out of box implementations for authentication that spring security provides.For example, If you want to use JDBC authentication there is a JDBC authentication manager which we can use and tell what the database is and what the query is and all that stuff.If you want to use LDAP there is an LDAP provider out of box which you can configure it to do what you wanted to do.However, for JPA there is no out of box implementation for authentication.The way to have spring security Get data from database using JPA actually have nothing to do with JPA at all.In authentication, AuthenticationManager talks to AuthenticationProvider and which further talks to UserDetailsService.And, the UserDetailsService has one method which gets user information based on the user name. In order to have spring security work with JPA, create an instance of this user details service and the logic that it does is basically look up the user using JPA.UserDetailsService is not dependent on JPA at all. We can have the service look up user from a text file.
+
+--> Create an implementation of UserDetailsService interface and make that as spring service i.e.annotated with @SpringService and then set it on the AuthenticationManagerBuilder object.Now, spring security is going to call a method on this user details service to get user information everytime when there is an autentication attempt.
+In class SecurityConfiguration, create UserDetailsService with member variable of it and autowired it.Create class MyUserDetailsService which implements UserDetailsService and override loadUserByUsername().Create class MyUserDeatils which implements UserDetails. This UserDetails interface has bunch of methods, it has the username, password, authorities and it has the information about the account is expired or the user is enabled or not.Spring security is going to take these values that the UserDetailsService returns and this is going to use for authentication.Just implement those overriden methods of UserDetails interface.There is a method called getAuthority() which returns a collection of granted authority instances.The MyUserDetailsService is going to return an instance of this MyUserDetails.Annotate MyUserDetailsService class as @Service which lets the spring security know that service exists and it auto-wires into my SecurityConfiguration class.And finally, annotate @EnableWebSecurity in SecurityConfiguration class to tell the spring security that this is a configuration class.
+
+--> Create a password encoder in SecurityConfiguration class in which spring security expects you to have a password encoder.
+
+--> Till now JPA has been implemented yet but while you run application http://localhost:8080 we get the login page of the application.Enter any username and password as pass because we have hardcoded and then enter to land to user page i.e. Welcome User.Here, the spring security calling the UserDetailsService and saying hey do you have a user with this particular username and give me the user details. Then, MyUserDetailsService then reurns MyUserDetails instance and its going to pass in username that spring security is passing for us and then we are returing an object with ROLE_USER and password as pass.This is how we use UserDetailsService connect to some other source of user information.
+
+--> Set up JPA and set up repository class and entity class in application - Create User entity class and anotted this class as @Entity and specify another annotation as @Table(name = "User") table name keep it as entity class name then JPA automatically maps it to that name. Add couple of fields to this class.
+@Entity
+@Table(name = "User")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private int id;
+    private String userName;
+    private String password;
+    private boolean active;
+    private String roles;
+All these fields corresponds to four columns in the MYSQL database table.
+Next, create a UserRepository interface which extends JpaRepository<User, Integer> with User and Integer as types. Specify defintion of method i.e. findByUserName(String userName) and it tells spring JPA that this particular service there is need to be an implementation which needs to work on User entity and this method provides hint about what this needs to do.Given a username JPA needs to create a method implementation which finds the given user.So, we are providing two clues to implement this method.First clue is that this is of user type as you can infer from generic type and the JPA repository and the second clue we are telling the JPA i need a method which finds this user type given a user name so that the find by user name method and then it takes user name as argument.So, there are method names, type names all these things provide hints to JPA about what to do.When we are specifying our intension that we need this functionality to look up a user given a username and then JPA is going to create the implementation for us, so that we can call this method without having to implement ourself.We just write the interface and implementation is provided for us based on what we want.
+Now, we have this interface UserDetailsService and we can actually call this method to get the user information.For this, get the instance of Repository in the MyUserDetailsService class. Now, we are replacing the hard coded user details with a call to User repository.Create member variable UserRepository and autowire it, so that spring is going to get and inject that instance of User repository into MyUserDetailsService.
+@Override
+    public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
+        Optional<User> user = userRepository.findByUserName(userName);
+When somebody does authentication spring security is going to call this service which gonna call load user by username and pass in the username.What we are doing is we are passing that username to the user repsository and saying hey user repository give us a user that has this username.And, when you get this user I need to convert this to a type my user details.
+
+--> In MyUserDetails class, specify four fields as userName, password, active and list of granted authorities(can not create single authority anymore we need to get the rules from the database and then map it to a list of granted authority). Now, in the constructor we need to extract those values from user instance that we have got from repository in converting into user details instance which is what the MyUserDetailsService is going to return.
+public class MyUserDetails implements UserDetails {
+
+    private String userName;
+    private String password;
+    private boolean active;
+    private List<GrantedAuthority> authorities;
+
+    public MyUserDetails(User user) {
+        this.userName = user.getUserName();
+        this.password = user.getPassword();
+        this.active = user.isActive();
+        this.authorities = Arrays.stream(user.getRoles().split(","))
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+    }
+We are converting that user instance that we get from the database into this user details object.Now, we have MyUserDetails instance which is getting the values from live data.Whatever user instance you pass in it is going to construct MyUserDetails instance dynamically.
+
+--> In MyUserDetailsService, take the user object out of this Option and then pass that user object to that constructor of MyUserDetails.And, whatever is the result in instance thats what we are going to be returning.
+@Service
+public class MyUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
+        Optional<User> user = userRepository.findByUserName(userName);
+
+        user.orElseThrow(() -> new UsernameNotFoundException("Not found: " + userName));
+
+        return user.map(MyUserDetails::new).get();
+    }
+}
+Spring security is going to call this method passing in the username and this one gonna pass it to the repository get the value from the repository convert it into user deatils instance and then send it back.
+
+--> Go to JPA application class which is the main method and enable JPA i.e @EnableJpaRepositories
+@SpringBootApplication
+@EnableJpaRepositories(basePackageClasses = UserRepository.class)
+public class SpringSecurityJpaApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringSecurityJpaApplication.class, args);
+	}
+
+}
+
+--> Spring JPA needs to know where the database is and what the database is.Go to application.properties file and set the database properties
+spring.datasource.url=jdbc:mysql://localhost:3306/springsecurity
+spring.datasource.username=root
+spring.datasource.password =password
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.naming-strategy=org.hibernate.cfg.ImprovedNamingStrategy
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL5Dialect
+
+Steps of implementing springboot + spring security + LDAP
+---------------------------------------------------------
+LDAP stands for light weight directory access protocol.It is a protocol for accessing and maintaining distributed directory information services over a network.This can be used for any kind of hierarchical information with the typical and most common use case of LDAP is to store organisational information and also maintain user information and help with authentication and authorization.You can imagine an organization with bunch of people all having their own information inside LDAP and LDAP acts as a way for those people for authenticate and authorize.In case of authenticate, the system checks with LDAP to see if this is a valid user and that person has required rights and credentials and all those things.LDAP is a kind of directory for users to authenticate and authorize and also providing user information.
+
+In case of spring security application to connect to the LDAP server which would be the server which contains all these information in order to identify a user.If somebody is trying to enter with user id and password then the spring security app will contact the LDAP server to get that user information and authenticate against LDAP.This is easy with spring security because spring security has some out of box classes which know how to connect to LDAP server.Configure those out of box classes to work with LDAP.
+
+--> Generate project from https://start.spring.io
+
+--> We are going to be running our own dev instance of an open source LDAP server which is going to be running on our machine which holds all information in memory.Add unbound id which is the open source implementation of LDAP server, spring-ldap-core dependency is the spring integration library that works with LDAP and spring-security-ldap dependency which basically helps the spring security integrate with LDAP.Finally, save the LDAP dependencies and then the IDE import those dependencies and add them to the class path.This ensure the local instance of LDAP is running.
+
+--> Configure local instance of LDAP -  Go to, application.properties file and add couple of properties which tells local instance of LDAP what to do.
+In application.properties file, add spring.ldap.embedded.port=8389(port number where this embedded LDAP instance needs to come). The 2nd property is the reference to the file which contains ceded data i.e.spring.ldap.embedded.ldif=classpath:ldap-data.ldif.Here ldif stands for LDAP data interchange format.This is basically the syntax for working with LDAP which basically tells whats the data, whats the tree structure, the hierarchy of data that you want to save in your LDAP instance.Now, have this ldap-data.ldif filename and save it anywhere in the class path i.e.src >> main >> resources and add data in ldap-data.ldif format and spring will look at the data and populate our local instance. Follow the guide i.e.https://spring.io/guides/gs/authenticating-ldap/ and go to Set up spring security section and copy bunch of ldif syntax over there and paste it in the ldap-data.ldif file.Allow spring security app to look at the LDAP instance that we are going to see with data available in ldap-data.ldif file and if somebody enters user id ben and password unencoded version available in ldap-data.ldif file then spring security app should able to authenticate for user ben.The third and the final property that we are going to configure is spring.ldap.embedded.base-dr=dc=springframework,dc=org, this will tell the embedded LDAP that what the root node should be.
+
+--> how to tell spring security when somebody is trying to authenticate - Before we do that we are going to create an API that is useful to verify authentication.
+For this, create a class HomeResource as @RestController which has one method at the root which returns simple text .This is something we want to authenticate
+@RestController
+public class HomeResource {
+
+  @GetMapping("/")
+  public String index() {
+    return "Home Page !";
+  }
+
+}
+--> Way to tell spring security to connect to LDAP and use it for authentication - Configuring spring security is by creating a class which extends we security configure or adapter.
+Create class SecurityConfiguration which extends WebSecurityConfigureAdapter and override couple of methods.This gives us the oppertunity to access some of the core spring security objects and then tell it what to do.First we are doing the authorization piece because this is not something very specific that we are working on.Basically, we are authorizing any request and make sure that the request is fully authenticated.
+@Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .anyRequest().fullyAuthenticated()
+                .and().formLogin();
+    }
+Way to tell spring security to authenticate with LDAP - By using configure method which takes in authentication manager builder i.e.configure(AuthenticationManagerBuilder auth).Depending on the type of authentication that i need to do i need to choose the right provider.There are bunch of authentication mechanisms that spring security provides by default.You can do JDBC authentication to connect to JDBC database source, you can do memory authentication which connects to memory data source.Like with, LDAP supports which comes out of box with spring security so you dont have to create your own custom classes.You just have to access this and tell it what to do.
+@Override
+  public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth
+      .ldapAuthentication()
+        .userDnPatterns("uid={0},ou=people") 
+        .groupSearchBase("ou=groups")
+        .contextSource()
+          .url("ldap://localhost:8389/dc=springframework,dc=org")
+          .and()
+        .passwordCompare()
+          .passwordEncoder(new BCryptPasswordEncoder())
+          .passwordAttribute("userPassword");
+  }
+Here, in the above method Dn stands for distinguish name which is basically a way in which the user information is stored in ldia format.The url is where the LDAP server is hosted in which 8389 is the same port persists in local instance to be running on, so this is going to connect to that particular location i.e.localhost:8389 and dc=springframework,dc=org is the same domain component and password encoder is the SHA encoder.Also, the passwordAttribute is the userPassword which is equivalent to the password stored in ldap-data.ldif file.Here, we are telling spring security how are LDAP data is structured.We are configuring an existing LDAP authentication mechanism.If somebody is trying to authenticate then query this LDAP instance get the user information and then compare the password and the allow or disallow any particular authentication attempt.
+
+Now, we are good to go.
+
+--> Browser localhost:8080/login 
+
+--> Recap the above steps, create a spring boot application from the scratch.We added local LDAP instance and have it running.We seeded with data by using ldap-data.ldif file.Then, we use SecurityConfiguration class which extends WebSecurityConfigureAdapter to configure the authentication.The authentication where we tell spring security to use LDAP authentication and give it some information about how LDAP data is structured.
+
+JWT Authorization
+-----------------
+JWT stands for json web token.
+
+--> JWT is used for managing authorization.The idea behind JWT is to create a standard way for two parties to communicate securely.So, there is open industry standard specification RFC 7519 which outlines how a JWT should be structured and how to use it for exchanging information.
+
+--> JWT is widely used for authorization.
+
+--> When it come to JWT, there are few authorization strategies as session token, JSON web token but they have one thing to blame and that is HTTP because HTTP is a stateless protocol as it never remembers/store information.When you authenticate the server creates a session and keeps track of it itself.It creates a session ID to associate with that session and gives the ID to user.Subsequently, client passes this token to the server as a part of every request and the server looks it up and identifies who the client is.So, server typically has to serve multiple client at the same time, so having the client passed the session ID makes it handy.The server always know who the client is and can look up the information based on this single token.However, how the client passes the session ID to the server really depends on the implementation.But the most common approach is to save the session ID in a cookie, so that it automatically get added to the cookie header on every subsequent request.Authentication happens the server saves the state and returns the response for the cookie subsequent request from the browser automatically have the cookie in the header because thats what browser do.The server has that information and can look it up again to identify the client.This mechanism of saving session IDs as tokens saved in cookies has been working fine for quite a while now.This is probably the popular mechanism for authorization for the most part.There are few problems in this approach thats why JWT comes in.
+
+-->  It assumes there is always just one monolithic server web application but modern web apps lies on multiple serversharing the load behind the load balancer.When the request comes in the load balancer decides which server to route the request to.The server could have login request routed to server 1 and this session is the memory of  server 1. The next request goes through the load balancer and will it goes to the server 2 because server 2 has no idea about the previous exchange as server 1 can only recognize and look up that session ID token.Here, we introduced a shared session cache that all these servers save session to  and they look up session tokens from.A Redis cache is sitting over here.The drawback is if there is one single point of failure now and if this Redis instance goes down all the sessions are down.So, most implementation don't follow this instead they follow the sticky session pattern in which the load balancer remembers which server has given the user session and it always redirects requests from that user to that specific server.This isn't that scalable.
+
+--> When the client authenticates and saving the user information in a state on the server and returning the ID as token it returns the user information itself as a token.Imagine JSON payload is being returned with the user information back.Everytime the client makes the subsequent request the client sends the whole JSON token with the request saying this is who i am, this is my id and this is my name.The server isn't saving anything.Everytime request comes in the server goes and check who this is.JWT says this username is fooand they have successfully authenticated.The token is not an ID here its JSON object which has all the information.
+
+--> JSON tokens exchange over the web JWT.The problem of security is handled by signing the tokens that handed across each time.When the user authenticates the server just doesn't send any JSON object it sends something in a special signed format.There is a signature here,so when the cient sends the subsequent request the sign JWT is sent back to the the server.The server verifies the signature and it trust it only if it is valid.If it valid then all the information that the server needs is right there in the token.Session IDs are reference tokens but JWT are value tokens.Session ID tokens refers to a state on the server while JWT contains the values itself.
+
+Structure Of JWT
+----------------
+--> JWT is combined together with three different parts.Three parts are Header, Payload, Signature.The whole point of creating JWT is to send some value from the server to the client so that the client can send it back on subsequent requests.Basically the server is saying i have authenticated you and next time you give me a request send me this token as a part of every request so that i know who you are.The value being sent is the payload which gets authenticated.The payload portion is the data that you want to send encoded in base 64.If the payload value decoded with base 64 then we are going to get the actual payload.Header said how this is being signed and another JSON object which has the type called JWT and the alogorithm which tells whats the alogorithm used to verify the signature.Header is also base 64 encoded.Signature is attached with JWT value because it is for the server to validate if this is actually correct i.e.Header and Payload.Signature i.e.String can only be computed by the server which issued the token.Server creates the signature and attached it to JWT and sends it back the client.If its a valid client it just sends it as is and there is no problem.And, if there is a malicious client they changed the value here i.e. signature is going to computed with the orginal value but not but for the value if you tamper original value.Server says, this is not the right signature for the value that you are sending me, so this is not the valid JWT.
+
+--> The signature is created by SHA256 algorithm which is created by server based on the server key.Its doing a base64 URL encode of the header plus base 64 URL encode of the payload.This both combined together to give header.payload encoded value plus sign it with a secret key.The signature is very much to check the authenticity of the value i.e.Header+Payload.
+
+--> This is JWT, this is what created when authentication happens.
+
+>> Flow of JWT creation and exchange - When the client authenticates with the server. The client uses authentication mechanism such as user id/password, token based authentication etc.It gives some proof that the user is who they say they are.The server says, i have authenticated you and now it creates JWT for future authorization purposes.JWT comes into picture for further interactions and the server says ok i have authenticated user in order to remember user in the subsequent interactions.This is why JWT is specific to authorization.Note - JWT comes into picture when authentication is complete.Server creates the JWT it has the payload that is attached with a header there and signs it.The sign is strictly associated with the value i.e Header+Payload that sends it back.When the client reveives JWT it can hold on to cookies or local storage but it has to pass it on every subsequent request.It uses HTTP header to exchange/passing JWT to server on every request.HTTP headers are key and value pairs.The key for passing this according to JWT standard is called authorization and the value is called bearer followed by a space followed by JWT, so the client on every subsequent request puts this on the header and sends it to the server.The server examines the request checks this value in the header and says Ok the authorization i have the JWT now splits into three parts Header.Payload.Signature.
+
+>> For transmitting JWT - One very common way of using JWT is using the process OAuth for authenticating and authorizing.OAuth comes with its own security protections which makes sure that people don't steal JWT.
+
+>> Disable JWT - When compared to session based authentication session can expired or terminated when you logoff from session based application.But, in case of JWT, when somebody steal any user JWT then it pass message to the server and server keep that particular JWT in the blacklisted list.Then, when another user uses that JWT then server compares that JWT in the blacklisted list and finds it and don't authorize.This is one of the disadvantage of JWT.  
+
+
+Steps for Springboot + Spring Security + JWT 
+--------------------------------------------
+Create a new authentication API endpoint
+Examine every incoming request for valid JWT and authorize
+https://github.com/koushikkothagal/spring-security-jwt
+
+--> Create a spring boot project from stratch with spring-security-jwt as artifact id, and dependencies as web and security.After that, download the projet and get this open Intellij IDE.
+
+--> Create Endpoint - Create class HelloResource and annoted with @Controller
+@Controller
+public class HelloResource
+
+@RequestMapping({"/hello"}) 
+public String hello(){
+  return "Hello World !";
+}
+}
+Only someone who is authenticated can access this API i.e.authenticated user can access this API.Since, spring security is added to the class path that's kind of the default behaviour for spring security.
+
+--> Use the user service method of overriding the default user behavior.Going to create a user data service which returns the static user which liverages that user data service.
+Create class SecurityConfigurer which extends WebSecurityConfigurerAdapter.Now, use configure(AuthenticationManagerBuilder auth) method which takes in AuthenticationManagerBuilder and autowire the MyUserDetailsService.
+
+--> Create class MyUserDetailsService which implements UserDetailsService and contains a method i.e.loadUserByUsername(String userName) in which spring framework going to call to load the user by username. It pass userName in method and expects your method to load the user based on whereever you got your user saved. It could be database or it could be somewhere else. 
+@Service
+public class MyUserDetailsService implements UserDetailsService {
+
+    @Override
+    public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
+        return new User("foo", "foo",
+                new ArrayList<>());
+    }
+}
+This is going to be service.
+
+--> The class SecurityConfigurer needs an annotation i.e.@EnableWebSecurity which lets spring security know about this class.This SecurityConfigurer class reply on the user information provided in the MyUserDetailsService class.
+
+--> Add password encoder in SecurityConfigurer class and choose no auth password encoder because we have specified the hardcoded password as "foo" in MyUserDetailsService class and also username as "foo".So, we want spring security framework to treat incoming password as to not do any hashing.That's why we have the no auth password encoder.
+
+So, far we have done the basic user credentials based authentication.
+
+--> Now, access application in the browser using http://localhost:8080 to get the login page. Enter username and password as "foo" to login successfully in the application show Hello World which is from HelloResource controller.
+
+This is done without JWT.
+
+--> Adding JWT in application - First, add couple of dependencies in POM.xml file and add two dependencies specifically. First dependency add jjwt and this is a library which creates JWT and also validates existing JWT's.Basically, this library creates JWT's and parse JWT's and verify it.The second library add jaxb-api, this is specifically required because of certain jaxb dependencies and also specifically because we are using java 9 plus.This is because any java 9 plus version will not have jaxb dependencies.Create a class which can abstract out all the JWT related stuff.I want this to be a util class which allows us to create JWT's.Given user details object and also wanted to pull up information from an existing JWT like look up user name from JWT, look up an expiration date from JWT and all.
+
+@Service
+public class JwtUtil {
+
+    private String SECRET_KEY = "secret";
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+    }
+
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
+
+        return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY).compact();
+    }
+
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+}
+
+The most important method in this is the generateToken(UserDetails userDetails) method which takes an userDetails object.This is the userDetails object that our user details services going to give us.This method will create JWT based on user details.That means, taking username from the user details obviously and making it into the JWT.This is going to call createToken() method which is a private method over here and then it is going to pass in a map of claims which is currently empty but we can pass in any specific cliams that we want to include in JWT.Anything we can include in the payload and then create a JWT for the username that you need.The createToken() method going to call JWT API and is setting the claims that we passed in which is empty object for now but can be change latter on.Here, the subject is the person who is being authenticated, in this case it is username over here and setting that as subject and also can set bunch of dates which is the current date.Also, set the expiration date which is 10 hours from current.Finally, sign in the token with signWith() method to sign the token using HS256 algorithm and passing SECRET_KEY which is defined as String "secret".The whole thing is builder pattern used by JWT API that we have choosen for this project.Anytime if we going to pass username in the generateToken then we are going to get back JWT for that user.SO, you can imagine when somebody authenticates you will need to create a JWT out of the user details of successful authentication.
+
+The next important method is extractClaim() method which takes in a token and then it uses a claimsResolver in order to figure out what the claims are.
+
+There is extractUsername() method which takes in the token then returns the userName from the token.
+
+The extractExpiration() method which takes in a token and then it returns the expiration date.Its using extractClaim() method to pull information from existing token.
+
+The isTokenExpired() method which returns whether the token is expired or not.It is basically taking the expiration from the token and seeing if its before the current date.
+
+The validateToken() method get the username using extractUsername and checks that username is same as the username and the user details that passed in.
+
+Now, we need to create a way where we can examine the incoming requests for the header and then get the JWT out of it and verify it that its valid.If its valid we need to make sure that it is in the security context as the currently logged in user.First, create an authenticate API which takes in user ID and the password and then it returns back JWT.
+
+>> Creating couple of classes which form the input and output for that method that acts as controller.In model package, create AuthenticationRequest which is going to contain a couple of member variables i.e. username and password.It authentication request is going to define the input argument to our authenticate method.This is what user is going to send in the post request and we need a class to define what the structure is.
+
+public class AuthenticationRequest implements Serializable {
+
+
+    private String username;
+    private String password;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    //need default constructor for JSON Parsing
+    public AuthenticationRequest()
+    {
+
+    }
+
+    public AuthenticationRequest(String username, String password) {
+        this.setUsername(username);
+        this.setPassword(password);
+    }
+}
+
+Now, we have the input structure for our authenticate method which takes in username and password in the POST request
+
+
+>> Create a class AuthenticationResponse and we need the json web token.
+public class AuthenticationResponse implements Serializable {
+
+    private final String jwt;
+
+    public AuthenticationResponse(String jwt) {
+        this.jwt = jwt;
+    }
+
+    public String getJwt() {
+        return jwt;
+    }
+}
+Now, we have output structure from our authentication method which is a property called jwt and the response that actually called the jwt value.
+
+>> Create a authentication endpoint - Go to the HelloResource, do the @RequestMapping("/authenticate") which is going to take in username and password as an input argument and its going to return JWT.
+
+@RequestController
+public class HelloResource{
+
+@Autowired
+private AuthenticationManager authenticationManager
+
+@Autowired
+private MyUserDetailsService userDetailsService;
+
+@Autowired
+private JwtUtil jwtTokenUtil;
+
+@RequestMapping("/hello")
+public String hello(){
+return "Hello World";
+}
+
+@RequestMapping(value="/authenticate", method= RequestMethod.POST)
+public ResponseEntity<?> createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest) throws Exception
+
+try{
+authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(),authenticationRequest.getPassword()))
+}catch(BadCredentialsException e){
+throw new Exception("Incorrect username and password, e");
+}
+
+final userDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+
+final String jwt = jwtTokenUtil.generateToken(userDetails);
+
+return ResponseEntity.ok(new AuthenticationResponse(jwt));
+}
+User will be sending username and password in the POST body.Create method defination createAuthenticationToken which takes in AuthenticationRequest an instance of the authentication request and its annotated with request body, so that we know that its parsing the request body to get username and password from the request body and then the response is the response entity.We are now going to get username and password from the authentication request.Now, spring MVC is going to set this in my instance and now it need to be authenticated.In order to authenticate we need to get the handle to authentication manager.So, create a member variable of AuthenticationManager which is going to be autowired.Need to use authentication manager instance in order to authenticate new UsernamePasswordAuthenticationToken which is the standard token that spring MVC uses for username and password and we are going to call authenticationManager.authenticate.Now, if this authentication fails there is an exception but we can handle this exception by putting this inside a try catch block.If the authentication is successful then this method needs to return the JWT.In order to return JWT, I need to create JWT.We can get user details using user details service that load user by username and have the username and can get user details out of it.Need to autowire user details service first.As we have the user details and can use the JWT util that we have created in order to get the JWT out of this user details.So, we need to autowire the jwt util and call the generateToken passing the userDetails and get the JWT.
+
+Now, we have the token and we need to create the authentication response instance and passing back ResponseEntity out of it.ResponseEntity.ok means that spring MVC will return a 200 Ok and the payload of the response is going to be new authentication response of JWT.And, the AuthenticationResponse is our class that we have created for this very purpose.
+
+Recap, We created an authenticate method endpoint which is mapped to the createAuthenticationToken which takes in authentication request which is basically the payload in the POST body which contains two username and the password.Using authentication manager in order to authenticate username and the password that is passed in.If it does not authenticate then it throws an exception.If it does authenticate then create JWT token.The jwtTokenutil needs user details in order to create jwt.So, we are going to call userDetailsService.loadUserByUsername because all we have username and get an instance for userDetails and going to pass that in jwtTokenUtil to get the jwt and then we are going to get the AuthenticationResponse and send it back.With this, we have an endpoint which does authentication.
+
+--> After this, go to, SecurityConfigurer class and override configure() method which takes in HttpSecurity as input argument.
+
+@Override
+	protected void configure(HttpSecurity httpSecurity) throws Exception {
+		httpSecurity.csrf().disable()
+				.authorizeRequests().antMatchers("/authenticate").permitAll().
+				anyRequest().authenticated();
+
+Also, override the authenticationManagerBean() method and returns super.authenticationManagerBean();. Just add @Bean annotation, so that spring security knows that there is a bean called AuthenticationManager.
+
+@Override
+	@Bean
+	public AuthenticationManager authenticationManagerBean() throws Exception {
+		return super.authenticationManagerBean();
+	}
+
+--> Make a POST request to this authenticate method using POSTMAN.In POSTMAN, access http://localhost:8080/authenticate and method is POST, header id content-type value is application/json.Body we are passing username and password as "foo".This is what user details service expects.Output is it will create a JWT token as response(i.e.JWT build in). This JWT token is something we would hope a client holds on to either in local storage or in the cookie and passes to an API on a subsequent request.Now, we will tell spring security to listen to every request for this particular authorization header and when there is a bearer and block created as JWT extract username out of it.
+
+Intercept all incoming requests
+-------------------------------
+Extract JWT from the header - Verify its valid JWT.If its valid then we know the person who is sending the JWT is trustworthy, so we can blindly rely on the content of the JWT get the username and put it into the security context. The way to intercept the request and look at the header and that is by creating a filter.There are bunch of filters that are already available.What we need to do is extend one of those filters and implement the filter method.
+
+-->Create filters package and class as JwtRequestFilter.This is filter which will intercepts every request just once and examining the header.This filter class extends OncePerRequestFilter and overrides doFilterInternal() method which actually does the job.This method takes bunch of arguments i.e.request, response, FilterChain which has the option of paasing on to the next filter in the filter chain or actually ending the request right there.It examine the incoming requests for the JWT in the header.Its going to look at the right header and see if the JWT is valid.If it finds a valid JWT its going to get the user details out of the user details service and save it in the security context.This is all the filter needs to do.Because of this, it needs a bunch of dependencies.It needs user details service in order to get the user details and finds JWT in the header it needs JWT util and verify its a valid JWT and also pull up username from it.Get the header for authorization.
+
+--> The whole reason we are creating JWT is to make it stateless.
+@Override
+	protected void configure(HttpSecurity httpSecurity) throws Exception {
+		httpSecurity.csrf().disable()
+				.authorizeRequests().antMatchers("/authenticate").permitAll().
+						anyRequest().authenticated().and().
+						exceptionHandling().and().sessionManagement()
+				.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+		httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+
+The above code tells spring security not to bother creating a session.Sets up security context each time for every request.Basically, adding a filter before UsernamePasswordAuthenticationFilter and passing in jwtRequestFilter that we create. This jwtRequestFilter is called before the UsernamePasswordAuthenticationFilter is called.
+
+--> Run this, http://localhost:8080/authenticate for POST request, header and body. Then we are going to get jwt.But we access without jwt then we get access denied.Apply Authorization with Bearer value then it gives value.
+
+Created a new authentication API endpoint.
+Examine every incoming request for valid JWT and authorize.
+
+
+OAuth
+-----
+It is meant for Authorization not Authentication.It is meant for a service to authorize another service.OAuth2.0 is widely used.OAuth access token contains user allowed permissions. 
+
+OAuth terminologies and flows 
+-----------------------------
+The photo printing service that the user is using and users wants to access some photos saved in Google drive in order to print.In this scenerio, one service that is the photo printing service wants to access Google drive service.
+
+In this whole scenerio few terminologies comes into picture 
+1> Resource - It is the photos on Google drive that need to be accessed.Thats the protected resource which is what not everybody can access.The OAuth fow is to allow access to this resource.
+
+2> Resource Owner - It is the person who has access right to the resource i.e. the user who is siting on the laptop  and saying the user has photos on Google drive and wants to print them.This is also the user who can give access rights to the Photo printing service.
+
+3> Resource Server - The server that hosting the protected resources.In this case, Google drive is the resource server and user is the resource owner and the resource itself is protected and that is what needs to be accessed.
+
+4> Client - The client is the application that needs access to that protected resource.It is the application that making request to the protected resource on behalf of the resource owner and with resource owner authorization.Resource owner basically saying hay client get him the protected resource.
+
+Note - In this whole scenerio, the person who has the resource has the burden of security.While the photo printing service is saying, it wants access to photos and Google drive has that what the photo printing service needs.So, its Google drive responsibility to provide the right authorization.Here, Resource server coupled with the Authorization server and is responsible for making sure who ever is accessing the resource server is authorized.Therefore,Google implements OAuth and takes care of the authorization and makes sure that the authorization is happening fine.
+
+5> Authorization server - The server issuing access tokens to the client. 
+
+
+
+
+
+
+     
